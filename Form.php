@@ -133,6 +133,11 @@ class Form
         return form_open_multipart($action, $attributes, $hidden);
     }
 
+    public function close(string $extra = ''): string
+    {
+        return form_close($extra);
+    }
+
     public function hidden($data, $name, bool $recursing = false, array $attributes = []): string
     {
         $value = $this->getValue($data, $name);
@@ -171,139 +176,160 @@ class Form
 
     public function password($data, $name, array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
+
+        $value = $this->getValue($data, $name);
 
         return form_password($name, $value, $attributes);
     }
 
     public function upload($data, $name, array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
+
+        $value = $this->getValue($data, $name);
 
         return form_upload($name, $value, $attributes);
     }
 
     public function textarea($data, $name, array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
+
+        $value = $this->getValue($data, $name);
 
         return form_textarea($name, $value, $attributes);
     }
 
     public function multiselect($data, $name, array $list = [], array $value = [], array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
+
+        $value = $this->getValue($data, $name);
 
         return form_multiselect($name, $list, $value, $attributes);
     }
 
     public function dropdown($data, $name, $list = [], $value = [], arrat $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
+
+        $value = $this->getValue($data, $name);
 
         return form_dropdown($name, $list, $value, $attributes);
     }
 
-    public function checkbox($data, $name, string $value = '', bool $checked = false, array $attributes = []): string
+    public function checkbox($data, $name, string $value = 1, array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
+
+        $currentValue = $this->getValue($data, $name);
+
+        if (is_array($currentValue))
+        {
+            if (array_search($value, $currentValue) !== false)
+            {
+                $checked = true;
+            }
+            else
+            {
+                $checked = false;
+            }
+        }
+        else
+        {
+            if ($currentValue == $value)
+            {
+                $checked = true;
+            }
+            else
+            {
+                $checked = false;
+            }
+        }
 
         return form_checkbox($name, $value, $checked, $attributes);
     }
 
-    public function radio($data, $name, string $value = '', bool $checked = false, array $attributes = []): string
+    public function radio($data, $name, string $value, array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
+
+        if ($this->getValue($data, $name) == $value)
+        {
+            $checked = true;
+        }
+        else
+        {
+            $checked = false;
+        }
 
         return form_radio($name, $value, $checked, $attributes);
     }
 
+    public function radioGroup($data, $name, $value, array $attributes = []): string
+    {
+        $input = $this->radio($data, $name, $value, $attributes);
+
+        return $this->renderGroup($input, $groupOptions);
+    }
+
     public function submit($name = '', string $value = '', array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
+
+        $value = $this->getValue($data, $name);
 
         return form_submit($name, $value, $attributes);
     }
 
     public function reset($name = '', string $value = '', array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
+
+        $value = $this->getValue($data, $name);
 
         return form_reset($name, $value, $attributes);
     }
 
-    public function button($name = '', string $content = '', array $attributes = []): string
+    public function button($name = '', string $value = '', array $attributes = []): string
     {
-        $name = $this->getName($name, $attributes);
+        $name = $this->getName($attributes, $name);
 
-        return form_button($name, $content, $attributes);
+        return form_button($name, $value, $attributes);
     }
   
-    public function label(string $label_text = '', string $id = '', array $attributes = []): string
+    public function label(string $label = '', array $attributes = []): string
     {
-        return form_label($label_text, $id, $attributes);
+        if (array_key_exists('id', $attributes))
+        {
+            $id = $attributes['id'];
+        }
+        else
+        {
+            $id = '';
+        }
+
+        return form_label($label, $id, $attributes);
     }
 
     public function datalist(string $name, string $value = '', array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
-
         $name = $this->getName($attributes, $name);
 
+        $value = $this->getValue($data, $name);
+   
         return form_datalist($name, $value, $attributes);
     }
 
-    public function fieldset(string $legend_text = '', array $attributes = []): string
+    public function openFieldset(string $legend_text = '', array $attributes = []): string
     {
         return form_fieldset($legend_text, $attributes);
     }
 
-    public function fieldsetClose(string $extra = ''): string
+    public function closeFieldset(string $extra = ''): string
     {
         return form_fieldset_close($extra);
-    }
-
-    public function close(string $extra = ''): string
-    {
-        return form_close($extra);
-    }
-
-    public function setValue(string $field, string $default = '', bool $html_escape = true): string
-    {
-        return set_value($field, $default, $html_escape);
-    }
-
-    public function setSelect(string $field, string $value = '', bool $default = false): string
-    {
-        return set_select($field, $value, $default);
-    }
-
-    public function setCheckbox(string $field, string $value = '', bool $default = false): string
-    {
-        return set_checkbox($field, $value, $default);
-    }
-
-    public function setRadio(string $field, string $value = '', bool $default = false): string
-    {
-        return set_radio($field, $value, $default);
     }
 
 }
