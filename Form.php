@@ -9,162 +9,301 @@ class Form
 
     protected $_errors = [];
 
-    public $containerTemplate = 'form_input_container';
+    protected $errorTemplate = '<div class="error">{error}</div>';
 
-    public $errorsTemplate = 'form_errors';
+    protected $groupTemplate = '<div class="form-group">{label}{input}{error}</div>';
 
-    public function __construct(object $model)
+    public function __construct(object $model, array $errors = [])
     {
         $this->_model = $model;
 
-        $this->_errors = (array) $this->_model->errors();
+        $this->_errors = $errors;
 
         helper(['form']);
     }
 
-    public function renderErrors($errors = [])
+    public function renderGroup($data, $name, $content, array $options = [])
     {
-        $errors = array_merge($this->_errors, $errors);
+        if (array_key_exists('template', $options))
+        {
+            $template = $options['template'];
 
-        return view($this->errorsTemplate, [
-            'errors' => $errors,
-            'form' => $this
-        ], ['saveData' => false]);
+            unset($options['template']);
+        }
+        else
+        {
+            $template = $this->groupTemplate;
+        }
+
+        $options['{input}'] = $content;
+
+        $options['{label}'] = $this->getLabel($options);
+
+        $error = $this->getArrayValue($options. 'error');
+
+        $options['{error}'] = $this->renderError($error);
+
+        return strtr($template, $options);
     }
 
-    public function setErrors($errors)
+    public function renderError($error)
     {
-        $this->_errors = $errors;
+        if (!$error)
+        {
+            return '';
+        }
+
+        return strtr($this->errorTemplate, ['{error}' => $error]);
     }
 
-    public function addErrors($errors)
+    public function renderErrors($errors = [], $renderAllErrors = true)
     {
-        $this->_errors = array_merge($this->_errors, $errors);
-    }
+        $return = '';
 
-    public function generateId($field)
-    {
-        $class = get_class($this->_model);
+        if ($renderAllErrors)
+        {
+            $errors = array_merge($this->_errors, $errors);
+        }
 
-        $segments = explode("\\", $class);
-
-        $segments = array_reverse($segments);
-
-        $first = array_shift($segments);
-
-        $return = $first . '-' . $field;
-
-        $return = strtolower($return);
+        foreach($errors as $error)
+        {
+            $return .= $this->renderError($error);
+        }
 
         return $return;
     }
 
-    public function renderContainer(string $field, string $input, array $options = []) : string
+    public function setErrors($errors, $merge = false)
     {
-        $options['label'] = $this->getLabel($field);
-
-        $options['error'] = $this->getError($field);
-
-        $options['input'] = $input;
-
-        if (!array_key_exists('labelOptions', $options))
+        if ($merge)
         {
-            $options['labelOptions'] = [];
+            $errors = array_merge($this->_errors, $errors);
         }
 
-        return view($this->containerTemplate, $options, ['saveData' => false]);
+        $this->_errors = $errors;
     }
 
-    public function getLabel(string $field)
-    {
-        if (method_exists($this->_model, 'getFieldLabel'))
-        {
-            return $this->_model->getFieldLabel($field);
-        }
-
-        $rules = $this->_model->getValidationRules();
-
-        if (array_key_exists($field, $rules))
-        {
-            if (is_array($rules[$field]) && array_key_exists('label', $rules[$field]))
-            {
-                return $rules[$field]['label'];
-            }
-        }
-
-        return $field;
-    }
-
-    public function getValue($data, string $field, $default = '')
+    protected function _getValue($data, $name, $default = null)
     {
         if (is_array($data))
         {
-            if (array_key_exists($field, $data))
+            if (array_key_exists($name, $data))
             {
-                return $data[$field];
+                return $data[$name]
             }
-
-            return $default;
         }
-
-        return !empty($data->$field) ? $data->$field : $default;
-    }
-
-    public function getError(string $field)
-    {
-        return array_key_exists($field, $this->_errors) ? $this->_errors[$field] : null;
-    }
-
-    public function input($data, string $field, array $options = [], array $containerOptions = []) : string
-    {
-        return $this->renderContainer(
-            $field, 
-            form_input($field, $this->getValue($data, $field), $options), 
-            $containerOptions
-        );
-    }
-
-    public function password($data, string $field, array $options = [], array $containerOptions = []) : string
-    {
-        return $this->renderContainer(
-            $field, 
-            form_password($field, $this->getValue($data, $field), $options), 
-            $containerOptions
-        );
-    }
-
-    public function textarea($data, string $field, array $options = [], array $containerOptions = []) : string
-    {
-        return $this->renderContainer(
-            $field, 
-            form_textarea($field, $this->getValue($data, $field), $options),
-            $containerOptions
-        );
-    }
-
-    public function checkbox($data, string $field, array $options = [], array $containerOptions = []) : string
-    {
-        if (empty($options['id']))
+        else
         {
-            $options['id'] = $this->generateId($field);
+            if (property_exists($data, $name))
+            {
+                return $data->$name;
+            }
         }
 
-        if (empty($containerOptions['labelOptions']['for']))
+        return $default;
+    }
+
+    protected function getName(array $options, $default = null)
+    {
+        return $this->_getValue($options, 'name', $default);
+    }
+
+    protected function getLabel(array $options, $default = null)
+    {
+        return $this->_getValue($options, 'label', $default);
+    }
+
+    protected function getValue($data, $name, $default = '')
+    {
+        return $this->_getValue($data, $name, $default);
+    }
+
+    public function getError(string $field, $default = null)
+    {
+        return $this->_getValue($this->_errors, $field, $default);
+    }
+
+    public function open($action = null, $attributes = [], array $hidden = []): string
+    {
+        return form_open($action, $attributes, $hidden);
+    }
+
+    public function openMultipart($action = null, $attributes = [], array $hidden = []): string
+    {
+        return form_open_multipart($action, $attributes, $hidden);
+    }
+
+    public function hidden($data, $name, bool $recursing = false, array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_hidden($name, $value, $recursing);
+    }
+
+    public function input($data, $name, array $attributes = []): string
+    {
+        if (array_key_exists('type', $attributes))
         {
-            $containerOptions['labelOptions']['for'] = $options['id'];
+            $type = $attributes['type'];
+
+            unset($attributes['type']);
+        }
+        else
+        {
+            $type = null;
         }
 
-        $content = '<br>';
+        $value = $this->getValue($data, $name);
 
-        $content .= form_hidden($field, 0);
+        $name = $this->getName($attributes, $name);
 
-        $content .= form_checkbox($field, 1, $this->getValue($data, $field) ? true : false, $options);
+        return form_input($name, $value, $attributes, $type);
+    }
 
-        return $this->renderContainer(
-            $field, 
-            $content,
-            $containerOptions
-        );
+    public function inputGroup($data, $name, array $attributes = [], array $groupOptions = [])
+    {
+        $input = $this->input($data, $name, $attributes);
+
+        return $this->renderGroup($input, $groupOptions);
+    }
+
+    public function password($data, $name, array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_password($name, $value, $attributes);
+    }
+
+    public function upload($data, $name, array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_upload($name, $value, $attributes);
+    }
+
+    public function textarea($data, $name, array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_textarea($name, $value, $attributes);
+    }
+
+    public function multiselect($data, $name, array $list = [], array $value = [], array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_multiselect($name, $list, $value, $attributes);
+    }
+
+    public function dropdown($data, $name, $list = [], $value = [], arrat $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_dropdown($name, $list, $value, $attributes);
+    }
+
+    public function checkbox($data, $name, string $value = '', bool $checked = false, array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_checkbox($name, $value, $checked, $attributes);
+    }
+
+    public function radio($data, $name, string $value = '', bool $checked = false, array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_radio($name, $value, $checked, $attributes);
+    }
+
+    public function submit($name = '', string $value = '', array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_submit($name, $value, $attributes);
+    }
+
+    public function reset($name = '', string $value = '', array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_reset($name, $value, $attributes);
+    }
+
+    public function button($name = '', string $content = '', array $attributes = []): string
+    {
+        $name = $this->getName($name, $attributes);
+
+        return form_button($name, $content, $attributes);
+    }
+  
+    public function label(string $label_text = '', string $id = '', array $attributes = []): string
+    {
+        return form_label($label_text, $id, $attributes);
+    }
+
+    public function datalist(string $name, string $value = '', array $attributes = []): string
+    {
+        $value = $this->getValue($data, $name);
+
+        $name = $this->getName($attributes, $name);
+
+        return form_datalist($name, $value, $attributes);
+    }
+
+    public function fieldset(string $legend_text = '', array $attributes = []): string
+    {
+        return form_fieldset($legend_text, $attributes);
+    }
+
+    public function fieldsetClose(string $extra = ''): string
+    {
+        return form_fieldset_close($extra);
+    }
+
+    public function close(string $extra = ''): string
+    {
+        return form_close($extra);
+    }
+
+    public function setValue(string $field, string $default = '', bool $html_escape = true): string
+    {
+        return set_value($field, $default, $html_escape);
+    }
+
+    public function setSelect(string $field, string $value = '', bool $default = false): string
+    {
+        return set_select($field, $value, $default);
+    }
+
+    public function setCheckbox(string $field, string $value = '', bool $default = false): string
+    {
+        return set_checkbox($field, $value, $default);
+    }
+
+    public function setRadio(string $field, string $value = '', bool $default = false): string
+    {
+        return set_radio($field, $value, $default);
     }
 
 }
