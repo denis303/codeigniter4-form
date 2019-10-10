@@ -68,7 +68,6 @@ class Form
             return $this->_errors[$name];
         }
 
-
         return null;
     }
 
