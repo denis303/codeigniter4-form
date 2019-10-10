@@ -9,9 +9,11 @@ class Form
 
     protected $_errors = [];
 
-    protected $errorTemplate = '<div class="error">{error}</div>';
+    protected $errorTemplate = '<div class="error"{attributes}>{error}</div>';
 
-    protected $groupTemplate = '<div class="form-group">{label}{input}{error}</div>';
+    protected $labelTemplate = '<label{attributes}>{label}</label>';
+
+    protected $groupTemplate = '<div class="form-group"{attributes}>{label}{input}{error}</div>';
 
     public function __construct(object $model, array $errors = [])
     {
@@ -20,6 +22,108 @@ class Form
         $this->_errors = $errors;
 
         helper(['form']);
+    }
+
+    public function getFieldName($data, $name, array $attributes = [])
+    {
+        if (array_key_exists('name', $attributes))
+        {
+            return $attributes['name'];
+        }
+
+        return $name;
+    }
+
+    public function getFieldLabel($data, $name, array $attributes = [])
+    {
+        if (array_key_exists('label', $attributes))
+        {
+            return $attributes['label'];
+        }
+
+        return $name;
+    }
+
+    public function getFieldValue($data, $name, array $attributes = [])
+    {
+        if (array_key_exists('name', $attributes))
+        {
+            return $attributes['name'];
+        }
+
+        return $this->_getValue($data, $name, '');
+    }
+
+    public function getFieldError($data, $name, array $attributes = [])
+    {
+        if (array_key_exists('error', $attributes))
+        {
+            return $attributes['error'];
+        }
+
+        $name = $this->getFieldName($data, $name, $attributes);
+
+        if (array_key_exists($name, $this->_errors))
+        {
+            return $this->_errors[$name];
+        }
+
+
+        return null;
+    }
+
+    public function setErrors($errors, $merge = false)
+    {
+        if ($merge)
+        {
+            $errors = array_merge($this->_errors, $errors);
+        }
+
+        $this->_errors = $errors;
+    }
+
+    public function renderError($error, array $options = [])
+    {
+        if (!$error)
+        {
+            return '';
+        }
+
+        return strtr(
+            $this->errorTemplate, 
+            [
+                '{error}' => $error,
+                '{attributes}' => ''
+            ]
+        );
+    }
+
+    public function renderErrors($errors = [], $renderAllErrors = true, array $options = [])
+    {
+        $return = '';
+
+        if ($renderAllErrors)
+        {
+            $errors = array_merge($this->_errors, $errors);
+        }
+
+        foreach($errors as $error)
+        {
+            $return .= $this->renderError($error,  $options);
+        }
+
+        return $return;
+    }
+
+    public function renderLabel($label, array $options = [])
+    {
+        return strtr(
+            $this->labelTemplate, 
+            [
+                '{label}' => $label,
+                '{attributes}' => stringify_attributes($options)
+            ]
+        );
     }
 
     public function renderGroup($data, $name, $content, array $options = [])
@@ -35,92 +139,22 @@ class Form
             $template = $this->groupTemplate;
         }
 
+        $labelOptions = [];
+
+        if (array_key_exists('labelOptions', $options))
+        {
+            $labelOptions = $options['labelOptions'];
+        }
+
         $options['{input}'] = $content;
 
-        $options['{label}'] = $this->getLabel($options);
+        $options['{label}'] = $this->renderLabel($this->getFieldLabel($data, $name, $options), $labelOptions);
 
-        $error = $this->getArrayValue($options. 'error');
+        $options['{error}'] = $this->renderError($this->getFieldError($data, $name, $options), $options);
 
-        $options['{error}'] = $this->renderError($error);
+        $options['{attributes}'] = '';
 
         return strtr($template, $options);
-    }
-
-    public function renderError($error)
-    {
-        if (!$error)
-        {
-            return '';
-        }
-
-        return strtr($this->errorTemplate, ['{error}' => $error]);
-    }
-
-    public function renderErrors($errors = [], $renderAllErrors = true)
-    {
-        $return = '';
-
-        if ($renderAllErrors)
-        {
-            $errors = array_merge($this->_errors, $errors);
-        }
-
-        foreach($errors as $error)
-        {
-            $return .= $this->renderError($error);
-        }
-
-        return $return;
-    }
-
-    public function setErrors($errors, $merge = false)
-    {
-        if ($merge)
-        {
-            $errors = array_merge($this->_errors, $errors);
-        }
-
-        $this->_errors = $errors;
-    }
-
-    protected function _getValue($data, $name, $default = null)
-    {
-        if (is_array($data))
-        {
-            if (array_key_exists($name, $data))
-            {
-                return $data[$name];
-            }
-        }
-        else
-        {
-            if (property_exists($data, $name))
-            {
-                return $data->$name;
-            }
-        }
-
-        return $default;
-    }
-
-    protected function getName(array $options, $default = null)
-    {
-        return $this->_getValue($options, 'name', $default);
-    }
-
-    protected function getLabel(array $options, $default = null)
-    {
-        return $this->_getValue($options, 'label', $default);
-    }
-
-    protected function getValue($data, $name, $default = '')
-    {
-        return $this->_getValue($data, $name, $default);
-    }
-
-    public function getError(string $field, $default = null)
-    {
-        return $this->_getValue($this->_errors, $field, $default);
     }
 
     public function open($action = null, $attributes = [], array $hidden = []): string
@@ -138,13 +172,13 @@ class Form
         return form_close($extra);
     }
 
-    public function hidden($data, $name, bool $recursing = false, array $attributes = []): string
+    public function hidden($data, $name, array $attributes = []): string
     {
-        $value = $this->getValue($data, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
-        $name = $this->getName($attributes, $name);
+        $value = $this->getFieldValue($data, $name, $attributes);
 
-        return form_hidden($name, $value, $recursing);
+        return form_hidden($name, $value);
     }
 
     public function input($data, $name, array $attributes = []): string
@@ -157,73 +191,108 @@ class Form
         }
         else
         {
-            $type = null;
+            $type = 'text';
         }
 
-        $value = $this->getValue($data, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
-        $name = $this->getName($attributes, $name);
+        $value = $this->getFieldValue($data, $name, $attributes);
 
         return form_input($name, $value, $attributes, $type);
     }
 
     public function inputGroup($data, $name, array $attributes = [], array $groupOptions = [])
     {
-        $input = $this->input($data, $name, $attributes);
+        $content = $this->input($data, $name, $attributes);
 
-        return $this->renderGroup($input, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupOptions);
     }
 
     public function password($data, $name, array $attributes = []): string
     {
-        $name = $this->getName($attributes, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
-        $value = $this->getValue($data, $name);
+        $value = $this->getFieldValue($data, $name, $attributes);
 
         return form_password($name, $value, $attributes);
     }
 
+    public function passwordGroup($data, $name, array $attributes = [], array $groupOptions = [])
+    {
+        $content = $this->password($data, $name, $attributes);
+
+        return $this->renderGroup($data, $name, $content, $groupOptions);
+    }
+
     public function upload($data, $name, array $attributes = []): string
     {
-        $name = $this->getName($attributes, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
-        $value = $this->getValue($data, $name);
+        $value = $this->getFieldValue($data, $name, $attributes);
 
         return form_upload($name, $value, $attributes);
     }
 
+    public function uploadGroup($data, $name, array $attributes = [], array $groupOptions = [])
+    {
+        $content = $this->upload($data, $name, $attributes);
+
+        return $this->renderGroup($data, $name, $content, $groupOptions);
+    }
+
     public function textarea($data, $name, array $attributes = []): string
     {
-        $name = $this->getName($attributes, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
-        $value = $this->getValue($data, $name);
+        $value = $this->getValue($data, $name, $attributes);
 
         return form_textarea($name, $value, $attributes);
     }
 
-    public function multiselect($data, $name, array $list = [], array $value = [], array $attributes = []): string
+    public function textareaGroup($data, $name, array $attributes = [], array $groupOptions = [])
     {
-        $name = $this->getName($attributes, $name);
+        $content = $this->textarea($data, $name, $attributes);
 
-        $value = $this->getValue($data, $name);
+        return $this->renderGroup($data, $name, $content, $groupOptions);
+    }
+
+    public function multiselect($data, $name, array $list = [], array $attributes = []): string
+    {
+        $name = $this->getFieldName($data, $name, $attributes);
+
+        $value = $this->getFieldValue($data, $name, $attributes);
 
         return form_multiselect($name, $list, $value, $attributes);
     }
 
-    public function dropdown($data, $name, $list = [], $value = [], array $attributes = []): string
+    public function multiselectGroup($data, $name, $list = [], array $attributes = [], array $groupOptions = []): string
     {
-        $name = $this->getName($attributes, $name);
+        $content = $this->multiselect($data, $name, $list, $attributes);
 
-        $value = $this->getValue($data, $name);
+        return $this->renderGroup($data, $name, $content, $groupOptions);
+    }
+
+    public function dropdown($data, $name, $list = [], array $attributes = []): string
+    {
+        $name = $this->getFieldName($data, $name, $attributes);
+
+        $value = $this->getFieldValue($data, $name, $attributes);
 
         return form_dropdown($name, $list, $value, $attributes);
     }
 
+    public function dropdownGroup($data, $name, $list = [], array $attributes = [], array $groupOptions = []): string
+    {
+        $content = $this->checkbox($data, $name, $list, $attributes);
+
+        return $this->renderGroup($data, $name, $content, $groupOptions);
+    }
+
     public function checkbox($data, $name, $value = 1, array $attributes = []): string
     {
-        $name = $this->getName($attributes, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
-        $currentValue = $this->getValue($data, $name);
+        $currentValue = $this->getFieldValue($data, $name, $attributes);
 
         if (is_array($currentValue))
         {
@@ -251,11 +320,18 @@ class Form
         return form_checkbox($name, (string) $value, $checked, $attributes);
     }
 
+    public function checkboxGroup($data, $name, $value = 1, array $attributes = [], array $groupOptions = []): string
+    {
+        $content = $this->checkbox($data, $name, $value, $attributes);
+
+        return $this->renderGroup($data, $name, $content, $groupOptions);
+    }
+
     public function radio($data, $name, string $value, array $attributes = []): string
     {
-        $name = $this->getName($attributes, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
-        if ($this->getValue($data, $name) == $value)
+        if ($this->getFieldValue($data, $name, $attributes) == $value)
         {
             $checked = true;
         }
@@ -267,38 +343,34 @@ class Form
         return form_radio($name, $value, $checked, $attributes);
     }
 
-    public function radioGroup($data, $name, $value, array $attributes = []): string
+    public function radioGroup($data, $name, $value, array $attributes = [], array $groupOptions = []): string
     {
-        $input = $this->radio($data, $name, $value, $attributes);
+        $content = $this->radio($data, $name, $value, $attributes);
 
-        return $this->renderGroup($input, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupOptions);
     }
 
-    public function submit($name = '', string $value = '', array $attributes = []): string
+    public function submit($data, $name, $value, array $attributes = []): string
     {
-        $name = $this->getName($attributes, $name);
-
-        $value = $this->getValue($data, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
         return form_submit($name, $value, $attributes);
     }
 
-    public function reset($name = '', string $value = '', array $attributes = []): string
+    public function reset($data, $name, $value, array $attributes = []): string
     {
-        $name = $this->getName($attributes, $name);
-
-        $value = $this->getValue($data, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
         return form_reset($name, $value, $attributes);
     }
 
-    public function button($name = '', string $value = '', array $attributes = []): string
+    public function button($data, $name, $value, array $attributes = []): string
     {
-        $name = $this->getName($attributes, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
         return form_button($name, $value, $attributes);
     }
-  
+
     public function label(string $label = '', array $attributes = []): string
     {
         if (array_key_exists('id', $attributes))
@@ -313,23 +385,53 @@ class Form
         return form_label($label, $id, $attributes);
     }
 
-    public function datalist(string $name, string $value = '', array $attributes = []): string
+    public function datalist($data, $name, array $attributes = []): string
     {
-        $name = $this->getName($attributes, $name);
+        $name = $this->getFieldName($data, $name, $attributes);
 
-        $value = $this->getValue($data, $name);
+        $value = $this->getFieldValue($data, $name, $attributes);
    
         return form_datalist($name, $value, $attributes);
     }
 
-    public function openFieldset(string $legend_text = '', array $attributes = []): string
+    public function datalistGroup($data, $name, array $attributes = [], array $groupOptions = []) : string
     {
-        return form_fieldset($legend_text, $attributes);
+        $content = $this->datalist($data, $name, $attributes);
+
+        return $this->renderGroup($data, $name, $content, $groupOptions);
     }
 
-    public function closeFieldset(string $extra = ''): string
+    public function openFieldset($label = '', array $attributes = []): string
     {
-        return form_fieldset_close($extra);
+        return form_fieldset($label, $attributes);
+    }
+
+    public function closeFieldset(): string
+    {
+        return form_fieldset_close();
+    }    
+
+    protected function _getValue($data, $name, $default = null)
+    {
+        if (is_array($data))
+        {
+            if (method_exists($data, 'toArray'))
+            {
+                $data = $data->toArray();
+            }
+            else
+            {
+
+                $data = (array) $data;
+            }
+        }
+
+        if (array_key_exists($name, $data))
+        {
+            return $data[$name];
+        }
+
+        return $default;
     }
 
 }
