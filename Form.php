@@ -28,6 +28,16 @@ class Form
         helper(['form']);
     }
 
+    public function getFieldId($data, $name, array $attributes = [])
+    {
+        if (array_key_exists('id', $attributes))
+        {
+            return $attributes['id'];
+        }
+
+        return $name . '_input';
+    }
+
     public function getFieldName($data, $name, array $attributes = [])
     {
         if (array_key_exists('name', $attributes))
@@ -341,6 +351,16 @@ class Form
 
     public function checkboxGroup($data, $name, $value = 1, array $attributes = [], array $groupOptions = []): string
     {
+        if (empty($groupOptions['labelOptions']['for']))
+        {
+            if (empty($attributes['id']))
+            {
+                $attributes['id'] = $this->getFieldId($data, $name);
+            }
+
+            $groupOptions['labelOptions']['for'] = $attributes['id'];
+        }
+
         $content = $this->checkbox($data, $name, $value, $attributes);
 
         return $this->renderGroup($data, $name, $content, $groupOptions);
