@@ -1,5 +1,9 @@
 <?php
-
+/**
+ * @author denis303 <mail@denis303.com>
+ * @license MIT
+ * @link http://denis303.com
+ */
 namespace denis303\codeigniter4;
 
 class Form
@@ -13,7 +17,7 @@ class Form
 
     protected $labelTemplate = '<label{attributes}>{label}</label>';
 
-    protected $groupTemplate = '<div class="form-group"{attributes}>{label}{input}{error}</div>';
+    protected $groupTemplate = '<div class="form-group"{attributes}>{label}{input}</div>';
 
     public function __construct(object $model, array $errors = [])
     {
@@ -46,9 +50,9 @@ class Form
 
     public function getFieldValue($data, $name, array $attributes = [])
     {
-        if (array_key_exists('name', $attributes))
+        if (array_key_exists('value', $attributes))
         {
-            return $attributes['name'];
+            return $attributes['value'];
         }
 
         return $this->_getValue($data, $name, '');
@@ -412,7 +416,7 @@ class Form
 
     protected function _getValue($data, $name, $default = null)
     {
-        if (is_array($data))
+        if (is_object($data))
         {
             if (method_exists($data, 'toArray'))
             {
