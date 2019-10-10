@@ -89,7 +89,7 @@ class Form
         {
             if (array_key_exists($name, $data))
             {
-                return $data[$name]
+                return $data[$name];
             }
         }
         else
