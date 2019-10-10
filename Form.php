@@ -7,11 +7,14 @@
 namespace denis303\codeigniter4;
 
 use PhpTheme\Html\HtmlHelper;
+use ReflectionObject;
 
 class Form
 {
 
     protected $_model;
+
+    protected $_reflection;
 
     protected $_errors = [];
 
@@ -66,6 +69,30 @@ class Form
         helper(['form']);
     }
 
+    protected function _getReflection()
+    {
+        if (!$this->_reflection)
+        {
+            $this->_reflection = new ReflectionObject($this->_model);
+        }
+
+        return $this->_reflection;
+    }
+
+    protected function _getFieldLabel($data, $name)
+    {
+        $reflection = $this->_getReflection();
+
+        $properties = $reflection->getDefaultProperties();
+
+        if (!empty($properties['validationRules'][$name]['label']))
+        {
+            return $properties['validationRules'][$name]['label'];
+        }
+
+        return $name;
+    }    
+
     public function getFieldId($data, $name, array $attributes = [])
     {
         if (array_key_exists('id', $attributes))
@@ -93,7 +120,7 @@ class Form
             return $attributes['label'];
         }
 
-        return $name;
+        return $this->_getFieldLabel($data, $name);
     }
 
     public function getFieldValue($data, $name, array $attributes = [], $default = '')
