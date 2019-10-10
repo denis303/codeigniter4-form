@@ -5,5 +5,8 @@
         "psr-4": {
             "denis303\\codeigniter4\\" : ""
         }
+    },
+    "require": {
+        "phptheme/html": "dev-master"
     }
 }

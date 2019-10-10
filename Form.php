@@ -6,6 +6,8 @@
  */
 namespace denis303\codeigniter4;
 
+use PhpTheme\Html\HtmlHelper;
+
 class Form
 {
 
@@ -13,11 +15,47 @@ class Form
 
     protected $_errors = [];
 
-    protected $errorTemplate = '<div class="error"{attributes}>{error}</div>';
+    public $errorTemplate = '<div{attributes}>{error}</div>';
 
-    protected $labelTemplate = '<label{attributes}>{label}</label>';
+    public $labelTemplate = '<label{attributes}>{label}</label>';
 
-    protected $groupTemplate = '<div class="form-group"{attributes}>{label}{input}</div>';
+    public $groupTemplate = '<div class="form-group"{attributes}>{label}{input}</div>';
+
+    public $errorAttributes = ['class' => 'alert alert-danger'];
+
+    public $labelAttributes = ['class' => 'form-label'];
+
+    public $inputAttributes = ['class' => 'form-control'];
+
+    public $passwordAttributes = ['class' => 'form-control'];
+
+    public $uploadAttributes = [];
+
+    public $textareaAttributes = [];
+
+    public $multiselectAttributes = [];
+
+    public $dropdownAttributes = [];
+
+    public $checkboxAttributes = [];
+
+    public $radioAttributes = [];
+
+    public $submitAttributes = ['class' => 'btn btn-primary'];
+
+    public $resetAttributes = [];
+
+    public $buttonAttributes = [];
+
+    public $datalistAttributes = [];
+
+    public $fieldsetAttributes = [];
+
+    public $formAttributes = [];
+
+    public $groupAttributes = [];
+
+    public $groupOptions = [];
 
     public function __construct(object $model, array $errors = [])
     {
@@ -58,14 +96,32 @@ class Form
         return $name;
     }
 
-    public function getFieldValue($data, $name, array $attributes = [])
+    public function getFieldValue($data, $name, array $attributes = [], $default = '')
     {
         if (array_key_exists('value', $attributes))
         {
             return $attributes['value'];
         }
 
-        return $this->_getValue($data, $name, '');
+        if (is_object($data))
+        {
+            if (method_exists($data, 'toArray'))
+            {
+                $data = $data->toArray();
+            }
+            else
+            {
+
+                $data = (array) $data;
+            }
+        }
+
+        if (array_key_exists($name, $data))
+        {
+            return $data[$name];
+        }
+
+        return $default;
     }
 
     public function getFieldError($data, $name, array $attributes = [])
@@ -95,8 +151,10 @@ class Form
         $this->_errors = $errors;
     }
 
-    public function renderError($error, array $options = [])
+    public function renderError($error, array $attributes = [])
     {
+        $attributes = HtmlHelper::mergeAttributes($this->errorAttributes, $attributes);
+
         if (!$error)
         {
             return '';
@@ -106,12 +164,12 @@ class Form
             $this->errorTemplate, 
             [
                 '{error}' => $error,
-                '{attributes}' => ''
+                '{attributes}' => stringify_attributes($attributes)
             ]
         );
     }
 
-    public function renderErrors($errors = [], $renderAllErrors = true, array $options = [])
+    public function renderErrors($errors = [], $renderAllErrors = true, array $attributes = [])
     {
         $return = '';
 
@@ -122,25 +180,29 @@ class Form
 
         foreach($errors as $error)
         {
-            $return .= $this->renderError($error,  $options);
+            $return .= $this->renderError($error,  $attributes);
         }
 
         return $return;
     }
 
-    public function renderLabel($label, array $options = [])
+    public function renderLabel($label, array $attributes = [])
     {
+        $attributes = HtmlHelper::mergeAttributes($this->labelAttributes, $attributes);
+
         return strtr(
             $this->labelTemplate, 
             [
                 '{label}' => $label,
-                '{attributes}' => stringify_attributes($options)
+                '{attributes}' => stringify_attributes($attributes)
             ]
         );
     }
 
     public function renderGroup($data, $name, $content, array $options = [])
     {
+        $attributes = array_merge($this->groupOptions, $options);
+
         if (array_key_exists('template', $options))
         {
             $template = $options['template'];
@@ -152,26 +214,52 @@ class Form
             $template = $this->groupTemplate;
         }
 
-        $labelOptions = [];
+        $labelAttributes = [];
 
-        if (array_key_exists('labelOptions', $options))
+        if (array_key_exists('labelAttributes', $options))
         {
-            $labelOptions = $options['labelOptions'];
+            $labelAttributes = $options['labelAttributes'];
+
+            unset($options['labelAttributes']);
         }
+
+        $errorAttributes = [];
+
+        if (array_key_exists('errorAttributes', $options))
+        {
+            $errorAttributes = $options['errorAttributes'];
+
+            unset($options['errorAttributes']);
+        }
+
+        if (array_key_exists('attributes', $options))
+        {
+            $attributes = $options['attributes'];
+
+            unset($options['attributes']);
+        }
+        else
+        {
+            $attributes = [];
+        }
+
+        $attributes = HtmlHelper::mergeAttributes($this->groupAttributes, $attributes);
 
         $options['{input}'] = $content;
 
-        $options['{label}'] = $this->renderLabel($this->getFieldLabel($data, $name, $options), $labelOptions);
+        $options['{label}'] = $this->renderLabel($this->getFieldLabel($data, $name, $options), $labelAttributes);
 
-        $options['{error}'] = $this->renderError($this->getFieldError($data, $name, $options), $options);
+        $options['{error}'] = $this->renderError($this->getFieldError($data, $name, $options), $errorAttributes);
 
-        $options['{attributes}'] = '';
+        $options['{attributes}'] = stringify_attributes($attributes);
 
         return strtr($template, $options);
     }
 
     public function open($action = null, $attributes = [], array $hidden = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->formAttributes, $attributes);
+
         return form_open($action, $attributes, $hidden);
     }
 
@@ -207,6 +295,8 @@ class Form
             $type = 'text';
         }
 
+        $attributes = HtmlHelper::mergeAttributes($this->inputAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
@@ -214,15 +304,17 @@ class Form
         return form_input($name, $value, $attributes, $type);
     }
 
-    public function inputGroup($data, $name, array $attributes = [], array $groupOptions = [])
+    public function inputGroup($data, $name, array $attributes = [], array $groupAttributes = [])
     {
         $content = $this->input($data, $name, $attributes);
 
-        return $this->renderGroup($data, $name, $content, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
     public function password($data, $name, array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->passwordAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
@@ -230,15 +322,17 @@ class Form
         return form_password($name, $value, $attributes);
     }
 
-    public function passwordGroup($data, $name, array $attributes = [], array $groupOptions = [])
+    public function passwordGroup($data, $name, array $attributes = [], array $groupAttributes = [])
     {
         $content = $this->password($data, $name, $attributes);
 
-        return $this->renderGroup($data, $name, $content, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
     public function upload($data, $name, array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->uploadAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
@@ -246,31 +340,35 @@ class Form
         return form_upload($name, $value, $attributes);
     }
 
-    public function uploadGroup($data, $name, array $attributes = [], array $groupOptions = [])
+    public function uploadGroup($data, $name, array $attributes = [], array $groupAttributes = [])
     {
         $content = $this->upload($data, $name, $attributes);
 
-        return $this->renderGroup($data, $name, $content, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
     public function textarea($data, $name, array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->textareaAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
-        $value = $this->getValue($data, $name, $attributes);
+        $value = $this->getFieldValue($data, $name, $attributes);
 
         return form_textarea($name, $value, $attributes);
     }
 
-    public function textareaGroup($data, $name, array $attributes = [], array $groupOptions = [])
+    public function textareaGroup($data, $name, array $attributes = [], array $groupAttributes = [])
     {
         $content = $this->textarea($data, $name, $attributes);
 
-        return $this->renderGroup($data, $name, $content, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
     public function multiselect($data, $name, array $list = [], array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->multiselectAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
@@ -278,15 +376,17 @@ class Form
         return form_multiselect($name, $list, $value, $attributes);
     }
 
-    public function multiselectGroup($data, $name, $list = [], array $attributes = [], array $groupOptions = []): string
+    public function multiselectGroup($data, $name, $list = [], array $attributes = [], array $groupAttributes = []): string
     {
         $content = $this->multiselect($data, $name, $list, $attributes);
 
-        return $this->renderGroup($data, $name, $content, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
     public function dropdown($data, $name, $list = [], array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->dropdownAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
@@ -294,15 +394,17 @@ class Form
         return form_dropdown($name, $list, $value, $attributes);
     }
 
-    public function dropdownGroup($data, $name, $list = [], array $attributes = [], array $groupOptions = []): string
+    public function dropdownGroup($data, $name, $list = [], array $attributes = [], array $groupAttributes = []): string
     {
         $content = $this->checkbox($data, $name, $list, $attributes);
 
-        return $this->renderGroup($data, $name, $content, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
     public function checkbox($data, $name, $value = 1, array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->checkboxAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         $currentValue = $this->getFieldValue($data, $name, $attributes);
@@ -349,25 +451,24 @@ class Form
         return $uncheck . form_checkbox($name, (string) $value, $checked, $attributes);
     }
 
-    public function checkboxGroup($data, $name, $value = 1, array $attributes = [], array $groupOptions = []): string
+    public function checkboxGroup($data, $name, $value = 1, array $attributes = [], array $groupAttributes = []): string
     {
-        if (empty($groupOptions['labelOptions']['for']))
+        if (empty($groupAttributes['labelAttributes']['for']))
         {
-            if (empty($attributes['id']))
-            {
-                $attributes['id'] = $this->getFieldId($data, $name);
-            }
+            $attributes['id'] = $this->getFieldId($data, $name, $attributes);
 
-            $groupOptions['labelOptions']['for'] = $attributes['id'];
+            $groupAttributes['labelAttributes']['for'] = $attributes['id'];
         }
 
         $content = $this->checkbox($data, $name, $value, $attributes);
 
-        return $this->renderGroup($data, $name, $content, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
     public function radio($data, $name, string $value, array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->radioAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         if ($this->getFieldValue($data, $name, $attributes) == $value)
@@ -382,15 +483,17 @@ class Form
         return form_radio($name, $value, $checked, $attributes);
     }
 
-    public function radioGroup($data, $name, $value, array $attributes = [], array $groupOptions = []): string
+    public function radioGroup($data, $name, $value, array $attributes = [], array $groupAttributes = []): string
     {
         $content = $this->radio($data, $name, $value, $attributes);
 
-        return $this->renderGroup($data, $name, $content, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
     public function submit($data, $name, $value, array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->submitAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         return form_submit($name, $value, $attributes);
@@ -398,6 +501,8 @@ class Form
 
     public function reset($data, $name, $value, array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->resetAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         return form_reset($name, $value, $attributes);
@@ -405,6 +510,8 @@ class Form
 
     public function button($data, $name, $value, array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->buttonAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         return form_button($name, $value, $attributes);
@@ -412,6 +519,8 @@ class Form
 
     public function label(string $label = '', array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->labelAttributes, $attributes);
+
         if (array_key_exists('id', $attributes))
         {
             $id = $attributes['id'];
@@ -426,6 +535,8 @@ class Form
 
     public function datalist($data, $name, array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->datalistAttributes, $attributes);
+
         $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
@@ -433,44 +544,23 @@ class Form
         return form_datalist($name, $value, $attributes);
     }
 
-    public function datalistGroup($data, $name, array $attributes = [], array $groupOptions = []) : string
+    public function datalistGroup($data, $name, array $attributes = [], array $groupAttributes = []) : string
     {
         $content = $this->datalist($data, $name, $attributes);
 
-        return $this->renderGroup($data, $name, $content, $groupOptions);
+        return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
     public function openFieldset($label = '', array $attributes = []): string
     {
+        $attributes = HtmlHelper::mergeAttributes($this->fieldsetAttributes, $attributes);
+
         return form_fieldset($label, $attributes);
     }
 
     public function closeFieldset(): string
     {
         return form_fieldset_close();
-    }    
-
-    protected function _getValue($data, $name, $default = null)
-    {
-        if (is_object($data))
-        {
-            if (method_exists($data, 'toArray'))
-            {
-                $data = $data->toArray();
-            }
-            else
-            {
-
-                $data = (array) $data;
-            }
-        }
-
-        if (array_key_exists($name, $data))
-        {
-            return $data[$name];
-        }
-
-        return $default;
     }
 
 }
