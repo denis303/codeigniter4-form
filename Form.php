@@ -320,7 +320,23 @@ class Form
             }
         }
 
-        return form_checkbox($name, (string) $value, $checked, $attributes);
+        $uncheckValue = '0';
+
+        if (array_key_exists('uncheckValue', $attributes))
+        {
+            $uncheckValue = (string) $attributes['uncheckValue'];
+        }
+
+        if ($uncheckValue || ($uncheckValue === '0'))
+        {
+            $uncheck = form_hidden($name, $uncheckValue);
+        }
+        else
+        {
+            $uncheck = '';
+        }
+
+        return $uncheck . form_checkbox($name, (string) $value, $checked, $attributes);
     }
 
     public function checkboxGroup($data, $name, $value = 1, array $attributes = [], array $groupOptions = []): string
