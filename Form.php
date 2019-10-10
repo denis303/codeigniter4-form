@@ -219,7 +219,7 @@ class Form
         return form_dropdown($name, $list, $value, $attributes);
     }
 
-    public function checkbox($data, $name, string $value = 1, array $attributes = []): string
+    public function checkbox($data, $name, $value = 1, array $attributes = []): string
     {
         $name = $this->getName($attributes, $name);
 
@@ -248,7 +248,7 @@ class Form
             }
         }
 
-        return form_checkbox($name, $value, $checked, $attributes);
+        return form_checkbox($name, (string) $value, $checked, $attributes);
     }
 
     public function radio($data, $name, string $value, array $attributes = []): string
