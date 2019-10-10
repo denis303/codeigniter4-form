@@ -210,7 +210,7 @@ class Form
         return form_multiselect($name, $list, $value, $attributes);
     }
 
-    public function dropdown($data, $name, $list = [], $value = [], arrat $attributes = []): string
+    public function dropdown($data, $name, $list = [], $value = [], array $attributes = []): string
     {
         $name = $this->getName($attributes, $name);
 
