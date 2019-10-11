@@ -40,7 +40,7 @@ class Form
 
     public $uploadAttributes = [];
 
-    public $textareaAttributes = [];
+    public $textareaAttributes = ['class' => 'form-control'];
 
     public $multiselectAttributes = [];
 
