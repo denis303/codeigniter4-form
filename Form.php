@@ -20,11 +20,15 @@ class Form
 
     public $errorTemplate = '<div{attributes}>{error}</div>';
 
+    public $messageTemplate = '<div{attributes}>{message}</div>';
+
     public $labelTemplate = '<label{attributes}>{label}</label>';
 
     public $groupTemplate = '<div class="form-group"{attributes}>{label}{input}</div>';
 
     public $errorAttributes = ['class' => 'alert alert-danger'];
+
+    public $messageAttributes = ['class' => 'alert alert-info'];
 
     public $labelAttributes = ['class' => 'form-label'];
 
@@ -200,6 +204,24 @@ class Form
         );
     }
 
+    public function renderMessage($message, array $attributes = [])
+    {
+        $attributes = HtmlHelper::mergeAttributes($this->messageAttributes, $attributes);
+
+        if (!$message)
+        {
+            return '';
+        }
+
+        return strtr(
+            $this->messageTemplate, 
+            [
+                '{message}' => $message,
+                '{attributes}' => stringify_attributes($attributes)
+            ]
+        );
+    }
+
     public function renderErrors($errors = [], $renderAllErrors = true, array $attributes = [])
     {
         $return = '';
@@ -212,6 +234,18 @@ class Form
         foreach($errors as $error)
         {
             $return .= $this->renderError($error,  $attributes);
+        }
+
+        return $return;
+    }
+
+    public function renderMessages($messages = [], $attributes = [])
+    {
+        $return = '';
+
+        foreach($messages as $message)
+        {
+            $return .= $this->renderMessage($message,  $attributes);
         }
 
         return $return;
