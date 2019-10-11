@@ -38,7 +38,7 @@ class Form
 
     public $multiselectAttributes = [];
 
-    public $dropdownAttributes = [];
+    public $dropdownAttributes = ['class' => 'form-control'];
 
     public $checkboxAttributes = [];
 
@@ -59,6 +59,10 @@ class Form
     public $groupAttributes = [];
 
     public $groupOptions = [];
+
+    public $buttonsTag = 'div';
+
+    public $buttonsAttributes = [];
 
     public function __construct(object $model, array $errors = [])
     {
@@ -423,7 +427,7 @@ class Form
 
     public function dropdownGroup($data, $name, $list = [], array $attributes = [], array $groupAttributes = []): string
     {
-        $content = $this->checkbox($data, $name, $list, $attributes);
+        $content = $this->dropdown($data, $name, $list, $attributes);
 
         return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
@@ -517,32 +521,36 @@ class Form
         return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
-    public function submit($data, $name, $value, array $attributes = []): string
+    public function submit($name, $value, array $attributes = []): string
     {
         $attributes = HtmlHelper::mergeAttributes($this->submitAttributes, $attributes);
-
-        $name = $this->getFieldName($data, $name, $attributes);
 
         return form_submit($name, $value, $attributes);
     }
 
-    public function reset($data, $name, $value, array $attributes = []): string
+    public function reset($name, $value, array $attributes = []): string
     {
         $attributes = HtmlHelper::mergeAttributes($this->resetAttributes, $attributes);
-
-        $name = $this->getFieldName($data, $name, $attributes);
 
         return form_reset($name, $value, $attributes);
     }
 
-    public function button($data, $name, $value, array $attributes = []): string
+    public function button($name, $value, array $attributes = []): string
     {
         $attributes = HtmlHelper::mergeAttributes($this->buttonAttributes, $attributes);
 
-        $name = $this->getFieldName($data, $name, $attributes);
-
         return form_button($name, $value, $attributes);
     }
+
+    public function submitButton($label, array $attributes = [])
+    {
+        return $this->submit('submit', $label, $attributes);
+    }
+
+    public function resetButton($label, array $attributes = [])
+    {
+        return $this->reset('reset', $label, $attributes);
+    }    
 
     public function label(string $label = '', array $attributes = []): string
     {
@@ -588,6 +596,16 @@ class Form
     public function closeFieldset(): string
     {
         return form_fieldset_close();
+    }
+
+    public function beginButtons()
+    {
+        return HtmlHelper::beginTag($this->buttonsTag, $this->buttonsAttributes);
+    }
+
+    public function endButtons()
+    {
+        return HtmlHelper::endTag($this->buttonsTag);
     }
 
 }
