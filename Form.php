@@ -18,6 +18,8 @@ class Form
 
     protected $_errors = [];
 
+    public $errorClass = 'is-invalid';
+
     public $errorTemplate = '<div{attributes}>{error}</div>';
 
     public $messageTemplate = '<div{attributes}>{message}</div>';
@@ -99,7 +101,34 @@ class Form
         }
 
         return $name;
+    }
+
+    public function fieldHasError($data, $name, array $attributes = [])
+    {
+        if ($this->getFieldError($data, $name, $attributes))
+        {
+            return true;
+        }
+
+        return false;
     }    
+
+    public function addErrorClass($data, $name, array $attributes = [])
+    {
+        if ($this->errorClass && $this->fieldHasError($data, $name, $attributes))
+        {
+            if (!array_key_exists('class', $attributes))
+            {
+                $attributes['class'] = $this->errorClass;
+            }
+            else
+            {
+                $attributes['class'] .= ' ' . $this->errorClass;
+            }
+        }
+
+        return $attributes;
+    }
 
     public function getFieldId($data, $name, array $attributes = [])
     {
@@ -366,6 +395,8 @@ class Form
 
         $value = $this->getFieldValue($data, $name, $attributes);
 
+        $attributes = $this->addErrorClass($data, $name, $attributes);
+
         return form_input($name, $value, $attributes, $type);
     }
 
@@ -383,6 +414,8 @@ class Form
         $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
+
+        $attributes = $this->addErrorClass($data, $name, $attributes);
 
         return form_password($name, $value, $attributes);
     }
@@ -402,6 +435,8 @@ class Form
 
         $value = $this->getFieldValue($data, $name, $attributes);
 
+        $attributes = $this->addErrorClass($data, $name, $attributes);
+
         return form_upload($name, $value, $attributes);
     }
 
@@ -419,6 +454,8 @@ class Form
         $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
+
+        $attributes = $this->addErrorClass($data, $name, $attributes);
 
         return form_textarea($name, $value, $attributes);
     }
@@ -438,6 +475,8 @@ class Form
 
         $value = $this->getFieldValue($data, $name, $attributes);
 
+        $attributes = $this->addErrorClass($data, $name, $attributes);
+
         return form_multiselect($name, $list, $value, $attributes);
     }
 
@@ -455,6 +494,8 @@ class Form
         $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
+
+        $attributes = $this->addErrorClass($data, $name, $attributes);
 
         return form_dropdown($name, $list, $value, $attributes);
     }
@@ -513,6 +554,8 @@ class Form
             $uncheck = '';
         }
 
+        $attributes = $this->addErrorClass($data, $name, $attributes);
+
         return $uncheck . form_checkbox($name, (string) $value, $checked, $attributes);
     }
 
@@ -544,6 +587,8 @@ class Form
         {
             $checked = false;
         }
+
+        $attributes = $this->addErrorClass($data, $name, $attributes);
 
         return form_radio($name, $value, $checked, $attributes);
     }
