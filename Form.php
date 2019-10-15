@@ -297,11 +297,19 @@ class Form
     {
         $attributes = array_merge($this->groupOptions, $options);
 
+        if (array_key_exists('prefix', $options))
+        {
+            $content = $options['prefix'] . $content;
+        }
+
+        if (array_key_exists('suffix', $options))
+        {
+            $content = $content . $options['suffix'];
+        }
+
         if (array_key_exists('template', $options))
         {
             $template = $options['template'];
-
-            unset($options['template']);
         }
         else
         {
@@ -313,8 +321,6 @@ class Form
         if (array_key_exists('labelAttributes', $options))
         {
             $labelAttributes = $options['labelAttributes'];
-
-            unset($options['labelAttributes']);
         }
 
         $errorAttributes = [];
@@ -322,15 +328,11 @@ class Form
         if (array_key_exists('errorAttributes', $options))
         {
             $errorAttributes = $options['errorAttributes'];
-
-            unset($options['errorAttributes']);
         }
 
         if (array_key_exists('attributes', $options))
         {
             $attributes = $options['attributes'];
-
-            unset($options['attributes']);
         }
         else
         {
