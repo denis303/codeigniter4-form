@@ -164,7 +164,7 @@ class Form
     {
         if (array_key_exists('value', $attributes))
         {
-            return $attributes['value'];
+            return (string) $attributes['value'];
         }
 
         if (is_object($data))
@@ -175,17 +175,16 @@ class Form
             }
             else
             {
-
                 $data = (array) $data;
             }
         }
 
         if (array_key_exists($name, $data))
         {
-            return $data[$name];
+            return (string) $data[$name];
         }
 
-        return $default;
+        return (string) $default;
     }
 
     public function getFieldError($data, $name, array $attributes = [])
