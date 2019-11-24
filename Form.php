@@ -26,7 +26,7 @@ class Form
 
     public $labelTemplate = '<label{attributes}>{label}</label>';
 
-    public $groupTemplate = '<div class="form-group"{attributes}>{label}{input}</div>';
+    public $groupTemplate = '<div class="form-group"{attributes}>{label}<br>{input}</div>';
 
     public $errorAttributes = ['class' => 'alert alert-danger'];
 
