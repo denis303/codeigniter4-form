@@ -6,6 +6,7 @@
  */
 namespace denis303\codeigniter4;
 
+use CodeIgniter\Entity;
 use PhpTheme\Html\HtmlHelper;
 use ReflectionObject;
 
@@ -169,6 +170,16 @@ class Form
 
         if (is_object($data))
         {
+            if ($data instanceof Entity)
+            {
+                $return = $data->$name;
+
+                if ($return !== null)
+                {
+                    return (string) $data->$name;
+                }
+            }
+
             if (method_exists($data, 'toArray'))
             {
                 $data = $data->toArray();
