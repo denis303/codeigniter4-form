@@ -27,7 +27,7 @@ class Form
 
     public $labelTemplate = '<label{attributes}>{label}</label>';
 
-    public $groupTemplate = '<div class="form-group"{attributes}>{label}{input}</div>';
+    public $groupTemplate = '<div class="form-group"{attributes}>{label}{input}{hint}</div>';
 
     public $errorAttributes = ['class' => 'alert alert-danger'];
 
@@ -70,6 +70,10 @@ class Form
     public $buttonsTag = 'div';
 
     public $buttonsAttributes = [];
+
+    public $hintTag = 'small';
+
+    public $hintAttributes = ['class' => 'form-text text-muted'];
 
     public function __construct(object $model, array $errors = [])
     {
@@ -303,6 +307,30 @@ class Form
         );
     }
 
+    public function renderHint(array $options = [])
+    {
+        if (array_key_exists('hint', $options) && $options['hint'])
+        {
+            $hintAttributes = $this->hintAttributes;
+
+            if (array_key_exists('hintAttributes', $options))
+            {
+                $hintAttributes = HtmlHelper::mergeAttributes($hintAttributes, $options['hintAttributes']);
+            }
+
+            $hintTag = $this->hintTag;
+
+            if (array_key_exists('hintTag', $options))
+            {
+                $hintTag = $options['hintTag'];
+            }
+
+            return HtmlHelper::tag($hintTag, $options['hint'], $hintAttributes);
+        }
+
+        return '';
+    }
+
     public function renderGroup($data, $name, $content, array $options = [])
     {
         $attributes = array_merge($this->groupOptions, $options);
@@ -351,15 +379,26 @@ class Form
 
         $attributes = HtmlHelper::mergeAttributes($this->groupAttributes, $attributes);
 
-        $options['{input}'] = $content;
+        if (array_key_exists('params', $options))
+        {
+            $group_options = $options['params'];
+        }
+        else
+        {
+            $group_options = [];
+        }
 
-        $options['{label}'] = $this->renderLabel($this->getFieldLabel($data, $name, $options), $labelAttributes);
+        $group_options['{input}'] = $content;
 
-        $options['{error}'] = $this->renderError($this->getFieldError($data, $name, $options), $errorAttributes);
+        $group_options['{label}'] = $this->renderLabel($this->getFieldLabel($data, $name, $options), $labelAttributes);
 
-        $options['{attributes}'] = stringify_attributes($attributes);
+        $group_options['{error}'] = $this->renderError($this->getFieldError($data, $name, $options), $errorAttributes);
 
-        return strtr($template, $options);
+        $group_options['{attributes}'] = stringify_attributes($attributes);
+
+        $group_options['{hint}'] = $this->renderHint($options);
+
+        return strtr($template, $group_options);
     }
 
     public function open($action = null, $attributes = [], array $hidden = []): string
