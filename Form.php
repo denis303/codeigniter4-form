@@ -6,6 +6,7 @@
  */
 namespace Denis303\CodeIgniter;
 
+use CodeIgniterModel;
 use CodeIgniter\Entity;
 use PhpTheme\HtmlHelper\HtmlHelper;
 
@@ -72,7 +73,7 @@ class Form
 
     public $hintAttributes = ['class' => 'form-text text-muted'];
 
-    public function __construct(object $model)
+    public function __construct(Model $model)
     {
         $this->_model = $model;
 
