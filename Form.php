@@ -1,23 +1,20 @@
 <?php
 /**
- * @author denis303 <mail@denis303.com>
+ * @author denis303 <dev@denis303.com>
  * @license MIT
  * @link http://denis303.com
  */
-namespace denis303\codeigniter4;
+namespace Denis303\CodeIgniter;
 
 use CodeIgniter\Entity;
-use PhpTheme\Html\HtmlHelper;
-use ReflectionObject;
+use PhpTheme\HtmlHelper\HtmlHelper;
 
 class Form
 {
 
     protected $_model;
 
-    protected $_reflection;
-
-    protected $_errors = [];
+    protected $_errors;
 
     public $errorClass = 'is-invalid';
 
@@ -39,7 +36,7 @@ class Form
 
     public $passwordAttributes = ['class' => 'form-control'];
 
-    public $uploadAttributes = [];
+    public $uploadAttributes = ['style' => 'display:block; clear:left'];
 
     public $textareaAttributes = ['class' => 'form-control'];
 
@@ -75,42 +72,41 @@ class Form
 
     public $hintAttributes = ['class' => 'form-text text-muted'];
 
-    public function __construct(object $model, array $errors = [])
+    public function __construct(object $model)
     {
         $this->_model = $model;
-
-        $this->_errors = $errors;
 
         helper(['form']);
     }
 
-    protected function _getReflection()
+    public function getModel()
     {
-        if (!$this->_reflection)
-        {
-            $this->_reflection = new ReflectionObject($this->_model);
-        }
-
-        return $this->_reflection;
+        return $this->_model;
     }
 
-    protected function _getFieldLabel($data, $name)
+    public function getErrors()
     {
-        $reflection = $this->_getReflection();
-
-        $properties = $reflection->getDefaultProperties();
-
-        if (!empty($properties['validationRules'][$name]['label']))
+        if ($this->_errors === null)
         {
-            return $properties['validationRules'][$name]['label'];
+            $this->_errors = (array) $this->getModel()->errors();
         }
 
-        return $name;
+        return $this->_errors;
     }
 
-    public function fieldHasError($data, $name, array $attributes = [])
+    public function setErrors($errors, $merge = false)
     {
-        if ($this->getFieldError($data, $name, $attributes))
+        if ($merge && $this->_errors)
+        {
+            $errors = array_merge($this->_errors, $errors);
+        }
+
+        $this->_errors = $errors;
+    }
+
+    public function fieldHasError(string $name, array $attributes = [])
+    {
+        if ($this->getFieldError($name, $attributes))
         {
             return true;
         }
@@ -120,7 +116,7 @@ class Form
 
     public function addErrorClass($data, $name, array $attributes = [])
     {
-        if ($this->errorClass && $this->fieldHasError($data, $name, $attributes))
+        if ($this->errorClass && $this->fieldHasError($name, $attributes))
         {
             if (!array_key_exists('class', $attributes))
             {
@@ -145,24 +141,21 @@ class Form
         return $name . '_input';
     }
 
-    public function getFieldName($data, $name, array $attributes = [])
-    {
-        if (array_key_exists('name', $attributes))
-        {
-            return $attributes['name'];
-        }
-
-        return $name;
-    }
-
-    public function getFieldLabel($data, $name, array $attributes = [])
+    public function getFieldLabel(string $name, array $attributes = [])
     {
         if (array_key_exists('label', $attributes))
         {
             return $attributes['label'];
         }
 
-        return $this->_getFieldLabel($data, $name);
+        $rules = $this->getModel()->validationRules;
+
+        if (!empty($rules[$name]['label']))
+        {
+            return $rules[$name]['label'];
+        }
+
+        return $name;
     }
 
     public function getFieldValue($data, $name, array $attributes = [], $default = '')
@@ -202,34 +195,24 @@ class Form
         return (string) $default;
     }
 
-    public function getFieldError($data, $name, array $attributes = [])
+    public function getFieldError(string $name, array $attributes = [])
     {
         if (array_key_exists('error', $attributes))
         {
             return $attributes['error'];
         }
 
-        $name = $this->getFieldName($data, $name, $attributes);
+        $errors = $this->getErrors();
 
-        if (array_key_exists($name, $this->_errors))
+        if (array_key_exists($name, $errors))
         {
-            return $this->_errors[$name];
+            return $errors[$name];
         }
 
         return null;
     }
 
-    public function setErrors($errors, $merge = false)
-    {
-        if ($merge)
-        {
-            $errors = array_merge($this->_errors, $errors);
-        }
-
-        $this->_errors = $errors;
-    }
-
-    public function renderError($error, array $attributes = [])
+    public function renderError($error, array $attributes = []) : string
     {
         $attributes = HtmlHelper::mergeAttributes($this->errorAttributes, $attributes);
 
@@ -247,7 +230,7 @@ class Form
         );
     }
 
-    public function renderMessage($message, array $attributes = [])
+    public function renderMessage($message, array $attributes = []) : string
     {
         $attributes = HtmlHelper::mergeAttributes($this->messageAttributes, $attributes);
 
@@ -265,14 +248,9 @@ class Form
         );
     }
 
-    public function renderErrors($errors = [], $renderAllErrors = true, array $attributes = [])
+    public function renderCustomErrors(array $errors) : string
     {
         $return = '';
-
-        if ($renderAllErrors)
-        {
-            $errors = array_merge($this->_errors, $errors);
-        }
 
         foreach($errors as $error)
         {
@@ -282,7 +260,21 @@ class Form
         return $return;
     }
 
-    public function renderMessages($messages = [], $attributes = [])
+    public function renderErrors($errors = [], array $attributes = [])
+    {
+        $return = '';
+
+        $errors = array_merge($this->getErrors(), $errors);
+
+        foreach($errors as $error)
+        {
+            $return .= $this->renderError($error,  $attributes);
+        }
+
+        return $return;
+    }
+
+    public function renderMessages($messages = [], $attributes = []) : string
     {
         $return = '';
 
@@ -294,8 +286,13 @@ class Form
         return $return;
     }
 
-    public function renderLabel($label, array $attributes = [])
+    public function renderLabel($label, array $attributes = []) : string
     {
+        if (!$label)
+        {
+            return '';
+        }
+
         $attributes = HtmlHelper::mergeAttributes($this->labelAttributes, $attributes);
 
         return strtr(
@@ -307,7 +304,7 @@ class Form
         );
     }
 
-    public function renderHint(array $options = [])
+    public function renderHint(array $options = []) : string
     {
         if (array_key_exists('hint', $options) && $options['hint'])
         {
@@ -331,7 +328,7 @@ class Form
         return '';
     }
 
-    public function renderGroup($data, $name, $content, array $options = [])
+    public function renderGroup($data, $name, $content, array $options = []) : string
     {
         $attributes = array_merge($this->groupOptions, $options);
 
@@ -390,9 +387,9 @@ class Form
 
         $group_options['{input}'] = $content;
 
-        $group_options['{label}'] = $this->renderLabel($this->getFieldLabel($data, $name, $options), $labelAttributes);
+        $group_options['{label}'] = $this->renderLabel($this->getFieldLabel($name, $options), $labelAttributes);
 
-        $group_options['{error}'] = $this->renderError($this->getFieldError($data, $name, $options), $errorAttributes);
+        $group_options['{error}'] = $this->renderError($this->getFieldError($name, $options), $errorAttributes);
 
         $group_options['{attributes}'] = stringify_attributes($attributes);
 
@@ -401,7 +398,7 @@ class Form
         return strtr($template, $group_options);
     }
 
-    public function open($action = null, $attributes = [], array $hidden = []): string
+    public function open($action = '', $attributes = [], array $hidden = []): string
     {
         $attributes = HtmlHelper::mergeAttributes($this->formAttributes, $attributes);
 
@@ -420,8 +417,6 @@ class Form
 
     public function hidden($data, $name, array $attributes = []): string
     {
-        $name = $this->getFieldName($data, $name, $attributes);
-
         $value = $this->getFieldValue($data, $name, $attributes);
 
         return form_hidden($name, $value);
@@ -442,8 +437,6 @@ class Form
 
         $attributes = HtmlHelper::mergeAttributes($this->inputAttributes, $attributes);
 
-        $name = $this->getFieldName($data, $name, $attributes);
-
         $value = $this->getFieldValue($data, $name, $attributes);
 
         $attributes = $this->addErrorClass($data, $name, $attributes);
@@ -462,8 +455,6 @@ class Form
     {
         $attributes = HtmlHelper::mergeAttributes($this->passwordAttributes, $attributes);
 
-        $name = $this->getFieldName($data, $name, $attributes);
-
         $value = $this->getFieldValue($data, $name, $attributes);
 
         $attributes = $this->addErrorClass($data, $name, $attributes);
@@ -478,11 +469,33 @@ class Form
         return $this->renderGroup($data, $name, $content, $groupAttributes);
     }
 
+    public function formatUploadExtensions(string $accept)
+    {
+        $return = '';
+
+        foreach(explode(',', $accept) as $ext)
+        {
+            $ext = ltrim($ext, '.');
+
+            if ($return)
+            {
+                $return .= ', ';
+            }
+
+            $return .= '.' . trim($ext); 
+        }
+
+        return $return;
+    }
+
     public function upload($data, $name, array $attributes = []): string
     {
-        $attributes = HtmlHelper::mergeAttributes($this->uploadAttributes, $attributes);
+        if (array_key_exists('accept', $attributes))
+        {
+            $attributes['accept'] = $this->formatUploadExtensions($attributes['accept']);
+        }
 
-        $name = $this->getFieldName($data, $name, $attributes);
+        $attributes = HtmlHelper::mergeAttributes($this->uploadAttributes, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
 
@@ -502,8 +515,6 @@ class Form
     {
         $attributes = HtmlHelper::mergeAttributes($this->textareaAttributes, $attributes);
 
-        $name = $this->getFieldName($data, $name, $attributes);
-
         $value = $this->getFieldValue($data, $name, $attributes);
 
         $attributes = $this->addErrorClass($data, $name, $attributes);
@@ -521,8 +532,6 @@ class Form
     public function multiselect($data, $name, array $list = [], array $attributes = []): string
     {
         $attributes = HtmlHelper::mergeAttributes($this->multiselectAttributes, $attributes);
-
-        $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
 
@@ -542,8 +551,6 @@ class Form
     {
         $attributes = HtmlHelper::mergeAttributes($this->dropdownAttributes, $attributes);
 
-        $name = $this->getFieldName($data, $name, $attributes);
-
         $value = $this->getFieldValue($data, $name, $attributes);
 
         $attributes = $this->addErrorClass($data, $name, $attributes);
@@ -561,8 +568,6 @@ class Form
     public function checkbox($data, $name, $value = 1, array $attributes = []): string
     {
         $attributes = HtmlHelper::mergeAttributes($this->checkboxAttributes, $attributes);
-
-        $name = $this->getFieldName($data, $name, $attributes);
 
         $currentValue = $this->getFieldValue($data, $name, $attributes);
 
@@ -627,8 +632,6 @@ class Form
     public function radio($data, $name, string $value, array $attributes = []): string
     {
         $attributes = HtmlHelper::mergeAttributes($this->radioAttributes, $attributes);
-
-        $name = $this->getFieldName($data, $name, $attributes);
 
         if ($this->getFieldValue($data, $name, $attributes) == $value)
         {
@@ -701,8 +704,6 @@ class Form
     public function datalist($data, $name, array $attributes = []): string
     {
         $attributes = HtmlHelper::mergeAttributes($this->datalistAttributes, $attributes);
-
-        $name = $this->getFieldName($data, $name, $attributes);
 
         $value = $this->getFieldValue($data, $name, $attributes);
    

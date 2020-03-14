@@ -3,10 +3,10 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "denis303\\codeigniter4\\" : ""
+            "Denis303\\CodeIgniter\\" : ""
         }
     },
     "require": {
-        "phptheme/html": "dev-master"
+        "phptheme/html-helper": "*"
     }
 }
