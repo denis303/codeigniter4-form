@@ -6,7 +6,7 @@
  */
 namespace Denis303\CodeIgniter;
 
-use CodeIgniterModel;
+use CodeIgniter\Model;
 use CodeIgniter\Entity;
 use PhpTheme\HtmlHelper\HtmlHelper;
 
